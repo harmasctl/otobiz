@@ -1,150 +1,117 @@
-import React, { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Grid2X2, Map } from "lucide-react";
+import React from "react";
 import VehicleCard from "./VehicleCard";
-import MapView from "./MapView";
 
 interface Vehicle {
   id: string;
   image: string;
   title: string;
-  price: number;
+  monthlyPrice: number;
+  initialPayment: number;
+  contractLength: number;
   year: number;
   mileage: number;
-  location: string;
-  transmission: string;
   fuelType: string;
-  coordinates: {
-    lat: number;
-    lng: number;
-  };
+  transmission: string;
+  engineSize: string;
+  power: string;
+  rating: number;
+  isNew: boolean;
 }
 
 interface VehicleGridProps {
   vehicles?: Vehicle[];
-  onVehicleClick?: (vehicle: Vehicle) => void;
-  onFavoriteClick?: (vehicle: Vehicle) => void;
+  onVehicleClick?: (id: string) => void;
+  onFavorite?: (id: string) => void;
 }
 
 const defaultVehicles: Vehicle[] = [
   {
     id: "1",
     image:
-      "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=500&h=300&fit=crop",
-    title: "2020 Toyota Camry",
-    price: 15000,
-    year: 2020,
-    mileage: 50000,
-    location: "Dakar, Senegal",
+      "https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=800&h=600&fit=crop",
+    title: "Renault Austral E-Tech",
+    monthlyPrice: 235,
+    initialPayment: 2811,
+    contractLength: 24,
+    year: 2023,
+    mileage: 0,
+    fuelType: "Hybrid",
     transmission: "Automatic",
-    fuelType: "Gasoline",
-    coordinates: { lat: 14.7167, lng: -17.4677 },
+    engineSize: "1.6L",
+    power: "200 HP",
+    rating: 4.5,
+    isNew: true,
   },
   {
     id: "2",
     image:
-      "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=500&h=300&fit=crop",
-    title: "2019 Honda Civic",
-    price: 12000,
-    year: 2019,
-    mileage: 65000,
-    location: "Saint-Louis, Senegal",
-    transmission: "Manual",
-    fuelType: "Diesel",
-    coordinates: { lat: 14.7366, lng: -17.4545 },
+      "https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?w=800&h=600&fit=crop",
+    title: "Cupra Born V2",
+    monthlyPrice: 232,
+    initialPayment: 2774,
+    contractLength: 24,
+    year: 2023,
+    mileage: 0,
+    fuelType: "Electric",
+    transmission: "Automatic",
+    engineSize: "N/A",
+    power: "204 HP",
+    rating: 4.7,
+    isNew: true,
   },
   {
     id: "3",
     image:
-      "https://images.unsplash.com/photo-1583121274602-3e2820c69888?w=500&h=300&fit=crop",
-    title: "2021 Hyundai Tucson",
-    price: 20000,
-    year: 2021,
-    mileage: 35000,
-    location: "Thiès, Senegal",
+      "https://images.unsplash.com/photo-1619767886558-efdc259b6e14?w=800&h=600&fit=crop",
+    title: "Nissan Qashqai e-Power",
+    monthlyPrice: 237,
+    initialPayment: 2835,
+    contractLength: 36,
+    year: 2023,
+    mileage: 0,
+    fuelType: "Hybrid",
     transmission: "Automatic",
-    fuelType: "Gasoline",
-    coordinates: { lat: 14.7266, lng: -17.4777 },
+    engineSize: "1.5L",
+    power: "190 HP",
+    rating: 4.6,
+    isNew: true,
+  },
+  {
+    id: "4",
+    image:
+      "https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=800&h=600&fit=crop",
+    title: "Skoda Kamiq Monte Carlo",
+    monthlyPrice: 276,
+    initialPayment: 3303,
+    contractLength: 36,
+    year: 2023,
+    mileage: 0,
+    fuelType: "Petrol",
+    transmission: "Manual",
+    engineSize: "1.5L",
+    power: "150 HP",
+    rating: 4.4,
+    isNew: true,
   },
 ];
 
-const VehicleGrid: React.FC<VehicleGridProps> = ({
+const VehicleGrid = ({
   vehicles = defaultVehicles,
   onVehicleClick = () => {},
-  onFavoriteClick = () => {},
-}) => {
-  const [viewMode, setViewMode] = useState<"grid" | "map">("grid");
-  const [selectedVehicle, setSelectedVehicle] = useState<string | undefined>();
-
-  const toggleViewMode = () => {
-    setViewMode(viewMode === "grid" ? "map" : "grid");
-  };
-
-  const handleMarkerClick = (location: { id: string }) => {
-    setSelectedVehicle(location.id);
-  };
-
+  onFavorite = () => {},
+}: VehicleGridProps) => {
   return (
-    <div className="w-full h-full bg-background p-4 sm:p-6">
-      <div className="mb-6 flex justify-between items-center">
-        <p className="text-sm text-muted-foreground">
-          {vehicles.length} vehicles found
-        </p>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={toggleViewMode}
-            className="flex items-center gap-2"
-          >
-            {viewMode === "grid" ? (
-              <>
-                <Map className="h-4 w-4" />
-                Show Map
-              </>
-            ) : (
-              <>
-                <Grid2X2 className="h-4 w-4" />
-                Show Grid
-              </>
-            )}
-          </Button>
-        </div>
-      </div>
-
-      {viewMode === "grid" ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6 justify-items-center">
-          {vehicles.map((vehicle) => (
-            <VehicleCard
-              key={vehicle.id}
-              image={vehicle.image}
-              title={vehicle.title}
-              price={vehicle.price}
-              year={vehicle.year}
-              mileage={vehicle.mileage}
-              location={vehicle.location}
-              transmission={vehicle.transmission}
-              fuelType={vehicle.fuelType}
-              onClick={() => onVehicleClick(vehicle)}
-              onFavorite={() => onFavoriteClick(vehicle)}
-            />
-          ))}
-        </div>
-      ) : (
-        <div className="h-[800px] w-full">
-          <MapView
-            locations={vehicles.map((v) => ({
-              id: v.id,
-              lat: v.coordinates.lat,
-              lng: v.coordinates.lng,
-              title: v.title,
-              price: `$${v.price.toLocaleString()}`,
-              image: v.image,
-            }))}
-            onMarkerClick={handleMarkerClick}
-            selectedLocation={selectedVehicle}
+    <div className="w-full bg-background">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {vehicles.map((vehicle) => (
+          <VehicleCard
+            key={vehicle.id}
+            {...vehicle}
+            onClick={onVehicleClick}
+            onFavorite={onFavorite}
           />
-        </div>
-      )}
+        ))}
+      </div>
     </div>
   );
 };
