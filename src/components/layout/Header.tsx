@@ -209,6 +209,14 @@ const Header = () => {
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
+                {user && user.role !== "dealer" && (
+                  <Button
+                    variant="outline"
+                    onClick={() => navigate("/become-seller")}
+                  >
+                    Become a Seller
+                  </Button>
+                )}
               </>
             ) : (
               <>

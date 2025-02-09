@@ -2,6 +2,7 @@ import { lazy, Suspense } from "react";
 import { Routes, Route } from "react-router-dom";
 import { LoadingPage } from "@/components/ui/loading";
 import { AuthProvider } from "./providers/AuthProvider";
+import BecomeSeller from "./pages/become-seller";
 
 // Layouts
 const AppLayout = lazy(() => import("./components/layout/AppLayout"));
@@ -57,6 +58,7 @@ function App() {
               <Route path="dashboard/listings" element={<MyListingsPage />} />
               <Route path="settings/profile" element={<ProfileSettings />} />
               <Route path="settings/security" element={<SecuritySettings />} />
+              <Route path="become-seller" element={<BecomeSeller />} />
             </Route>
 
             {/* Dealer Routes */}

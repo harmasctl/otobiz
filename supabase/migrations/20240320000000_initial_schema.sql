@@ -1,120 +1,168 @@
+-- Enable necessary extensions
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
 -- Create profiles table
-create table profiles (
-  id uuid references auth.users on delete cascade,
-  full_name text,
-  avatar_url text,
-  email text,
-  phone text,
-  role text default 'user',
-  is_verified boolean default false,
-  business_license text,
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
-  primary key (id)
+CREATE TABLE profiles (
+  id UUID PRIMARY KEY REFERENCES auth.users ON DELETE CASCADE,
+  email TEXT UNIQUE,
+  full_name TEXT,
+  avatar_url TEXT,
+  phone TEXT,
+  role TEXT DEFAULT 'user',
+  is_verified BOOLEAN DEFAULT false,
+  business_license TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Create vehicles table
-create table vehicles (
-  id uuid default uuid_generate_v4() primary key,
-  seller_id uuid references profiles(id) on delete cascade,
-  make text not null,
-  model text not null,
-  year integer not null,
-  price numeric not null,
-  mileage numeric,
-  fuel_type text,
-  transmission text,
-  vin text,
-  description text,
-  images text[],
-  location text,
-  latitude numeric,
-  longitude numeric,
-  status text default 'available',
-  is_featured boolean default false,
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+CREATE TABLE vehicles (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  seller_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  make TEXT NOT NULL,
+  model TEXT NOT NULL,
+  year INTEGER NOT NULL,
+  price DECIMAL NOT NULL,
+  mileage INTEGER,
+  fuel_type TEXT,
+  transmission TEXT,
+  vin TEXT,
+  location TEXT,
+  latitude DECIMAL,
+  longitude DECIMAL,
+  description TEXT,
+  images TEXT[],
+  status TEXT DEFAULT 'active',
+  is_featured BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Create favorites table
-create table favorites (
-  id uuid default uuid_generate_v4() primary key,
-  user_id uuid references profiles(id) on delete cascade,
-  vehicle_id uuid references vehicles(id) on delete cascade,
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
-  unique(user_id, vehicle_id)
+CREATE TABLE favorites (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  vehicle_id UUID REFERENCES vehicles(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id, vehicle_id)
 );
 
 -- Create reviews table
-create table reviews (
-  id uuid default uuid_generate_v4() primary key,
-  reviewer_id uuid references profiles(id) on delete cascade,
-  seller_id uuid references profiles(id) on delete cascade,
-  rating integer check (rating >= 1 and rating <= 5),
-  comment text,
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+CREATE TABLE reviews (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  reviewer_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  seller_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  rating INTEGER CHECK (rating >= 1 AND rating <= 5),
+  comment TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Create saved_searches table
+CREATE TABLE saved_searches (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  filters JSONB NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Enable Row Level Security
-alter table profiles enable row level security;
-alter table vehicles enable row level security;
-alter table favorites enable row level security;
-alter table reviews enable row level security;
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE vehicles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE favorites ENABLE ROW LEVEL SECURITY;
+ALTER TABLE reviews ENABLE ROW LEVEL SECURITY;
+ALTER TABLE saved_searches ENABLE ROW LEVEL SECURITY;
 
 -- Create policies
-create policy "Public profiles are viewable by everyone"
-  on profiles for select
-  using (true);
+-- Profiles
+CREATE POLICY "Profiles are viewable by everyone" ON profiles
+  FOR SELECT USING (true);
 
-create policy "Users can update own profile"
-  on profiles for update
-  using (auth.uid() = id);
+CREATE POLICY "Users can update own profile" ON profiles
+  FOR UPDATE USING (auth.uid() = id);
 
-create policy "Vehicles are viewable by everyone"
-  on vehicles for select
-  using (true);
+-- Vehicles
+CREATE POLICY "Vehicles are viewable by everyone" ON vehicles
+  FOR SELECT USING (true);
 
-create policy "Authenticated users can create vehicles"
-  on vehicles for insert
-  with check (auth.role() = 'authenticated');
+CREATE POLICY "Sellers can insert vehicles" ON vehicles
+  FOR INSERT WITH CHECK (
+    auth.uid() = seller_id AND 
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('dealer', 'admin'))
+  );
 
-create policy "Users can update own vehicles"
-  on vehicles for update
-  using (auth.uid() = seller_id);
+CREATE POLICY "Sellers can update own vehicles" ON vehicles
+  FOR UPDATE USING (
+    auth.uid() = seller_id AND 
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('dealer', 'admin'))
+  );
 
-create policy "Users can delete own vehicles"
-  on vehicles for delete
-  using (auth.uid() = seller_id);
+CREATE POLICY "Sellers can delete own vehicles" ON vehicles
+  FOR DELETE USING (
+    auth.uid() = seller_id AND 
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('dealer', 'admin'))
+  );
 
-create policy "Users can manage their favorites"
-  on favorites for all
-  using (auth.uid() = user_id);
+-- Favorites
+CREATE POLICY "Users can view own favorites" ON favorites
+  FOR SELECT USING (auth.uid() = user_id);
 
-create policy "Reviews are viewable by everyone"
-  on reviews for select
-  using (true);
+CREATE POLICY "Users can insert own favorites" ON favorites
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
 
-create policy "Authenticated users can create reviews"
-  on reviews for insert
-  with check (auth.role() = 'authenticated');
+CREATE POLICY "Users can delete own favorites" ON favorites
+  FOR DELETE USING (auth.uid() = user_id);
 
-create policy "Users can update own reviews"
-  on reviews for update
-  using (auth.uid() = reviewer_id);
+-- Reviews
+CREATE POLICY "Reviews are viewable by everyone" ON reviews
+  FOR SELECT USING (true);
 
-create policy "Users can delete own reviews"
-  on reviews for delete
-  using (auth.uid() = reviewer_id);
+CREATE POLICY "Authenticated users can insert reviews" ON reviews
+  FOR INSERT WITH CHECK (auth.uid() = reviewer_id);
+
+CREATE POLICY "Users can update own reviews" ON reviews
+  FOR UPDATE USING (auth.uid() = reviewer_id);
+
+CREATE POLICY "Users can delete own reviews" ON reviews
+  FOR DELETE USING (auth.uid() = reviewer_id);
+
+-- Saved Searches
+CREATE POLICY "Users can view own saved searches" ON saved_searches
+  FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own saved searches" ON saved_searches
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own saved searches" ON saved_searches
+  FOR DELETE USING (auth.uid() = user_id);
+
+-- Enable realtime subscriptions
+ALTER PUBLICATION supabase_realtime ADD TABLE vehicles;
+ALTER PUBLICATION supabase_realtime ADD TABLE favorites;
+ALTER PUBLICATION supabase_realtime ADD TABLE reviews;
+ALTER PUBLICATION supabase_realtime ADD TABLE saved_searches;
 
 -- Create functions
-create or replace function public.handle_new_user()
-returns trigger as $$
-begin
-  insert into public.profiles (id, full_name, avatar_url, email)
-  values (new.id, new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'avatar_url', new.email);
-  return new;
-end;
-$$ language plpgsql security definer;
+CREATE OR REPLACE FUNCTION get_vehicle_favorites_count(vehicle_id UUID)
+RETURNS INTEGER AS $$
+  SELECT COUNT(*)::INTEGER
+  FROM favorites
+  WHERE vehicle_id = $1;
+$$ LANGUAGE SQL STABLE;
 
--- Create trigger for new user
-create trigger on_auth_user_created
-  after insert on auth.users
-  for each row execute procedure public.handle_new_user();
+CREATE OR REPLACE FUNCTION get_seller_rating(seller_id UUID)
+RETURNS DECIMAL AS $$
+  SELECT COALESCE(AVG(rating)::DECIMAL(3,2), 0)
+  FROM reviews
+  WHERE seller_id = $1;
+$$ LANGUAGE SQL STABLE;
+
+-- Create indexes
+CREATE INDEX idx_vehicles_seller ON vehicles(seller_id);
+CREATE INDEX idx_vehicles_make_model ON vehicles(make, model);
+CREATE INDEX idx_vehicles_price ON vehicles(price);
+CREATE INDEX idx_vehicles_year ON vehicles(year);
+CREATE INDEX idx_vehicles_location ON vehicles(location);
+CREATE INDEX idx_favorites_user ON favorites(user_id);
+CREATE INDEX idx_favorites_vehicle ON favorites(vehicle_id);
+CREATE INDEX idx_reviews_seller ON reviews(seller_id);
+CREATE INDEX idx_saved_searches_user ON saved_searches(user_id);

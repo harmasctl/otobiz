@@ -1,102 +1,59 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
+import { SavedSearch } from "@/types/database";
+import { savedSearchesApi } from "@/lib/api/saved-searches";
 import { useAuth } from "@/lib/auth";
-import { VehicleFilters } from "./useVehicleSearch";
-
-export interface SavedSearch {
-  id: string;
-  user_id: string;
-  filters: VehicleFilters;
-  name: string;
-  created_at: string;
-}
 
 export function useSavedSearches() {
   const { user } = useAuth();
-  const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([]);
+  const [searches, setSearches] = useState<SavedSearch[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
 
-    const fetchSavedSearches = async () => {
+    const fetchSearches = async () => {
       try {
-        const { data, error } = await supabase
-          .from("saved_searches")
-          .select("*")
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: false });
-
-        if (error) throw error;
-        setSavedSearches(data || []);
+        const data = await savedSearchesApi.list();
+        setSearches(data);
       } catch (err) {
-        console.error("Error fetching saved searches:", err);
+        setError(err as Error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchSavedSearches();
-
-    // Set up real-time subscription
-    const subscription = supabase
-      .channel("saved_searches_channel")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "saved_searches",
-          filter: `user_id=eq.${user.id}`,
-        },
-        (payload) => {
-          fetchSavedSearches();
-        },
-      )
-      .subscribe();
-
-    return () => {
-      subscription.unsubscribe();
-    };
+    fetchSearches();
   }, [user]);
 
-  const saveSearch = async (name: string, filters: VehicleFilters) => {
-    if (!user) return;
-
+  const saveSearch = async (name: string, filters: Record<string, any>) => {
     try {
-      const { error } = await supabase.from("saved_searches").insert([
-        {
-          user_id: user.id,
-          name,
-          filters,
-        },
-      ]);
-
-      if (error) throw error;
+      const saved = await savedSearchesApi.create({ name, filters });
+      setSearches((prev) => [saved, ...prev]);
+      return saved;
     } catch (err) {
-      console.error("Error saving search:", err);
+      setError(err as Error);
       throw err;
     }
   };
 
   const deleteSearch = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from("saved_searches")
-        .delete()
-        .eq("id", id)
-        .eq("user_id", user?.id);
-
-      if (error) throw error;
+      await savedSearchesApi.delete(id);
+      setSearches((prev) => prev.filter((s) => s.id !== id));
     } catch (err) {
-      console.error("Error deleting saved search:", err);
+      setError(err as Error);
       throw err;
     }
   };
 
   return {
-    savedSearches,
+    searches,
     loading,
+    error,
     saveSearch,
     deleteSearch,
   };
