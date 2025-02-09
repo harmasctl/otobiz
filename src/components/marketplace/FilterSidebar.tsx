@@ -13,20 +13,13 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
 
+import { VehicleFilters } from "@/hooks/useVehicleSearch";
+
 interface FilterSidebarProps {
-  onFilterChange?: (filters: FilterState) => void;
+  filters: VehicleFilters;
+  onFilterChange: (filters: VehicleFilters) => void;
   onClose?: () => void;
   isOpen?: boolean;
-}
-
-interface FilterState {
-  priceRange: [number, number];
-  makes: string[];
-  models: string[];
-  years: [number, number];
-  mileage: [number, number];
-  transmission: string[];
-  fuelType: string[];
 }
 
 const FilterSidebar = ({

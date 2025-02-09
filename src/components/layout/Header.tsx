@@ -1,10 +1,11 @@
 import React from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import {
   NavigationMenu,
   NavigationMenuContent,
   NavigationMenuItem,
-  NavigationMenuLink,
   NavigationMenuList,
   NavigationMenuTrigger,
 } from "@/components/ui/navigation-menu";
@@ -19,32 +20,28 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Bell, Heart, LogOut, Settings, User } from "lucide-react";
 
-interface HeaderProps {
-  user?: {
-    name: string;
-    email: string;
-    avatar?: string;
-  };
-  onLogin?: () => void;
-  onLogout?: () => void;
-  onRegister?: () => void;
-}
+const Header = () => {
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
 
-const Header = ({
-  user,
-  onLogin = () => {},
-  onLogout = () => {},
-  onRegister = () => {},
-}: HeaderProps) => {
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate("/auth/login", { replace: true });
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
+  };
+
   return (
     <header className="border-b bg-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <div className="flex-shrink-0">
-            <a href="/" className="text-2xl font-bold text-primary">
-              AutoTrader
-            </a>
+            <Link to="/" className="text-2xl font-bold text-primary">
+              Otobiz
+            </Link>
           </div>
 
           {/* Navigation */}
@@ -54,92 +51,96 @@ const Header = ({
                 <NavigationMenuTrigger>Buy</NavigationMenuTrigger>
                 <NavigationMenuContent>
                   <div className="grid gap-3 p-6 w-[400px] lg:w-[500px] lg:grid-cols-2">
-                    <a
-                      href="#"
-                      className="group block space-y-1 p-3 rounded-lg hover:bg-accent"
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start"
+                      onClick={() => navigate("/search")}
                     >
-                      <div className="font-medium">Search Cars</div>
-                      <div className="text-sm text-muted-foreground">
-                        Find your perfect vehicle
+                      <div>
+                        <div className="font-medium">Search Cars</div>
+                        <div className="text-sm text-muted-foreground">
+                          Find your perfect vehicle
+                        </div>
                       </div>
-                    </a>
-                    <a
-                      href="#"
-                      className="group block space-y-1 p-3 rounded-lg hover:bg-accent"
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start"
+                      onClick={() => navigate("/vehicles/new")}
                     >
-                      <div className="font-medium">New Cars</div>
-                      <div className="text-sm text-muted-foreground">
-                        Browse the latest models
+                      <div>
+                        <div className="font-medium">New Cars</div>
+                        <div className="text-sm text-muted-foreground">
+                          Browse the latest models
+                        </div>
                       </div>
-                    </a>
-                    <a
-                      href="#"
-                      className="group block space-y-1 p-3 rounded-lg hover:bg-accent"
-                    >
-                      <div className="font-medium">Used Cars</div>
-                      <div className="text-sm text-muted-foreground">
-                        Great deals on used vehicles
-                      </div>
-                    </a>
-                    <a
-                      href="#"
-                      className="group block space-y-1 p-3 rounded-lg hover:bg-accent"
-                    >
-                      <div className="font-medium">Car Reviews</div>
-                      <div className="text-sm text-muted-foreground">
-                        Expert reviews and ratings
-                      </div>
-                    </a>
+                    </Button>
                   </div>
                 </NavigationMenuContent>
               </NavigationMenuItem>
-              <NavigationMenuItem>
-                <NavigationMenuTrigger>Sell</NavigationMenuTrigger>
-                <NavigationMenuContent>
-                  <div className="grid gap-3 p-6 w-[400px] lg:w-[500px] lg:grid-cols-2">
-                    <a
-                      href="#"
-                      className="group block space-y-1 p-3 rounded-lg hover:bg-accent"
-                    >
-                      <div className="font-medium">List Your Car</div>
-                      <div className="text-sm text-muted-foreground">
-                        Create an attractive listing
-                      </div>
-                    </a>
-                    <a
-                      href="#"
-                      className="group block space-y-1 p-3 rounded-lg hover:bg-accent"
-                    >
-                      <div className="font-medium">Dealer Portal</div>
-                      <div className="text-sm text-muted-foreground">
-                        For registered dealers
-                      </div>
-                    </a>
-                  </div>
-                </NavigationMenuContent>
-              </NavigationMenuItem>
+
+              {user?.role === "dealer" && (
+                <NavigationMenuItem>
+                  <NavigationMenuTrigger>Sell</NavigationMenuTrigger>
+                  <NavigationMenuContent>
+                    <div className="grid gap-3 p-6 w-[400px] lg:w-[500px] lg:grid-cols-2">
+                      <Button
+                        variant="ghost"
+                        className="w-full justify-start"
+                        onClick={() => navigate("/dealer/listings/create")}
+                      >
+                        <div>
+                          <div className="font-medium">List Your Car</div>
+                          <div className="text-sm text-muted-foreground">
+                            Create an attractive listing
+                          </div>
+                        </div>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        className="w-full justify-start"
+                        onClick={() => navigate("/dealer")}
+                      >
+                        <div>
+                          <div className="font-medium">Dealer Portal</div>
+                          <div className="text-sm text-muted-foreground">
+                            Manage your dealership
+                          </div>
+                        </div>
+                      </Button>
+                    </div>
+                  </NavigationMenuContent>
+                </NavigationMenuItem>
+              )}
+
               <NavigationMenuItem>
                 <NavigationMenuTrigger>Finance</NavigationMenuTrigger>
                 <NavigationMenuContent>
                   <div className="grid gap-3 p-6 w-[400px] lg:w-[500px] lg:grid-cols-2">
-                    <a
-                      href="#"
-                      className="group block space-y-1 p-3 rounded-lg hover:bg-accent"
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start"
+                      onClick={() => navigate("/finance/loans")}
                     >
-                      <div className="font-medium">Car Loans</div>
-                      <div className="text-sm text-muted-foreground">
-                        Find the best rates
+                      <div>
+                        <div className="font-medium">Car Loans</div>
+                        <div className="text-sm text-muted-foreground">
+                          Find the best rates
+                        </div>
                       </div>
-                    </a>
-                    <a
-                      href="#"
-                      className="group block space-y-1 p-3 rounded-lg hover:bg-accent"
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start"
+                      onClick={() => navigate("/finance/insurance")}
                     >
-                      <div className="font-medium">Insurance</div>
-                      <div className="text-sm text-muted-foreground">
-                        Protect your vehicle
+                      <div>
+                        <div className="font-medium">Insurance</div>
+                        <div className="text-sm text-muted-foreground">
+                          Protect your vehicle
+                        </div>
                       </div>
-                    </a>
+                    </Button>
                   </div>
                 </NavigationMenuContent>
               </NavigationMenuItem>
@@ -150,10 +151,18 @@ const Header = ({
           <div className="flex items-center space-x-4">
             {user ? (
               <>
-                <Button variant="ghost" size="icon">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => navigate("/dashboard/saved")}
+                >
                   <Heart className="h-5 w-5" />
                 </Button>
-                <Button variant="ghost" size="icon">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => navigate("/dashboard/notifications")}
+                >
                   <Bell className="h-5 w-5" />
                 </Button>
                 <DropdownMenu>
@@ -175,16 +184,26 @@ const Header = ({
                       </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => navigate("/settings/profile")}
+                    >
                       <User className="mr-2 h-4 w-4" />
                       <span>Profile</span>
                     </DropdownMenuItem>
-                    <DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => navigate("/settings/security")}
+                    >
                       <Settings className="mr-2 h-4 w-4" />
                       <span>Settings</span>
                     </DropdownMenuItem>
+                    {user.role === "admin" && (
+                      <DropdownMenuItem onClick={() => navigate("/admin")}>
+                        <Settings className="mr-2 h-4 w-4" />
+                        <span>Admin Panel</span>
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={onLogout}>
+                    <DropdownMenuItem onClick={handleLogout}>
                       <LogOut className="mr-2 h-4 w-4" />
                       <span>Log out</span>
                     </DropdownMenuItem>
@@ -193,10 +212,10 @@ const Header = ({
               </>
             ) : (
               <>
-                <Button variant="ghost" onClick={onLogin}>
+                <Button variant="ghost" onClick={() => navigate("/auth/login")}>
                   Log in
                 </Button>
-                <Button onClick={onRegister}>Register</Button>
+                <Button onClick={() => navigate("/register")}>Register</Button>
               </>
             )}
           </div>
