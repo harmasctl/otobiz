@@ -23,6 +23,22 @@ export default function RegisterPage() {
     e.preventDefault();
     setError("");
 
+    // Validate password
+    if (formData.password.length < 8) {
+      setError("Password must be at least 8 characters long");
+      return;
+    }
+
+    if (!/[A-Z]/.test(formData.password)) {
+      setError("Password must contain at least one uppercase letter");
+      return;
+    }
+
+    if (!/[0-9]/.test(formData.password)) {
+      setError("Password must contain at least one number");
+      return;
+    }
+
     if (formData.password !== formData.confirmPassword) {
       setError("Passwords do not match");
       return;
@@ -36,10 +52,10 @@ export default function RegisterPage() {
         email: formData.email,
         password: formData.password,
       });
-      navigate("/");
+      // Navigation is handled in AuthProvider
     } catch (err) {
-      setError("Failed to create an account.");
-    } finally {
+      console.error("Registration error:", err);
+      setError("Failed to create account. Please try again.");
       setLoading(false);
     }
   };
@@ -64,7 +80,7 @@ export default function RegisterPage() {
             <Button
               variant="link"
               className="font-medium text-primary"
-              onClick={() => navigate("/login")}
+              onClick={() => navigate("/auth/login")}
             >
               Sign in
             </Button>
@@ -147,7 +163,7 @@ export default function RegisterPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <Button
               type="button"
               variant="outline"

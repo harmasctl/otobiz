@@ -19,7 +19,6 @@ export const adminApi = {
     }
   },
 
-  // Rest of the admin API functions...
   async getStats() {
     const { data: stats, error } = await supabase.rpc("get_admin_stats");
     if (error) throw error;
@@ -100,25 +99,22 @@ export const adminApi = {
     return data;
   },
 
+  // Return default settings until system_settings table is set up
   async getSystemSettings() {
-    const { data, error } = await supabase
-      .from("system_settings")
-      .select("*")
-      .eq("id", 1)
-      .single();
-    if (error) throw error;
-    return data;
+    return {
+      site_name: "Otobiz",
+      maintenance_mode: false,
+      allowed_file_types: ["image/jpeg", "image/png", "image/webp"],
+      max_file_size: 5242880,
+      featured_listing_price: 49.99,
+      commission_rate: 5.0,
+      default_currency: "USD",
+    };
   },
 
   async updateSystemSettings(settings: Record<string, any>) {
-    const { data, error } = await supabase
-      .from("system_settings")
-      .update(settings)
-      .eq("id", 1)
-      .select()
-      .single();
-    if (error) throw error;
-    return data;
+    // Temporarily do nothing until system_settings table is set up
+    return settings;
   },
 
   async getActivityLogs(filters?: {
@@ -163,5 +159,24 @@ export const adminApi = {
     });
     if (error) throw error;
     return data;
+  },
+
+  // Return empty array until email_templates table is set up
+  async getEmailTemplates() {
+    return [];
+  },
+
+  async createEmailTemplate(template: any) {
+    // Temporarily do nothing until email_templates table is set up
+    return template;
+  },
+
+  async updateEmailTemplate(id: string, updates: any) {
+    // Temporarily do nothing until email_templates table is set up
+    return { id, ...updates };
+  },
+
+  async deleteEmailTemplate(id: string) {
+    // Temporarily do nothing until email_templates table is set up
   },
 };

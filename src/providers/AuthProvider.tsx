@@ -21,9 +21,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // Listen for auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log("Auth state changed:", event, session);
       if (session?.user) {
-        fetchUserProfile(session.user.id);
+        await fetchUserProfile(session.user.id);
+        if (event === "SIGNED_IN") {
+          navigate("/");
+        }
       } else {
         setUser(null);
         setLoading(false);
@@ -31,7 +35,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [navigate]);
 
   const fetchUserProfile = async (userId: string) => {
     try {
@@ -41,17 +45,49 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         .eq("id", userId)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (user?.user_metadata?.full_name) {
+          const { error: createError } = await supabase
+            .from("profiles")
+            .insert([
+              {
+                id: userId,
+                full_name: user.user_metadata.full_name,
+                email: user.email,
+                avatar_url: user.user_metadata.avatar_url,
+                role: "user",
+                is_verified: false,
+              },
+            ]);
+          if (createError) throw createError;
 
-      setUser({
-        id: userId,
-        name: profile.full_name || "",
-        email: profile.email || "",
-        avatar: profile.avatar_url,
-        role: profile.role || "user",
-      });
+          setUser({
+            id: userId,
+            name: user.user_metadata.full_name,
+            email: user.email || "",
+            avatar: user.user_metadata.avatar_url,
+            role: "user",
+            is_verified: false,
+          });
+        } else {
+          throw error;
+        }
+      } else {
+        setUser({
+          id: userId,
+          name: profile.full_name,
+          email: profile.email,
+          avatar: profile.avatar_url,
+          role: profile.role,
+          is_verified: profile.is_verified,
+        });
+      }
     } catch (error) {
       console.error("Error fetching user profile:", error);
+      setUser(null);
     } finally {
       setLoading(false);
     }
@@ -62,7 +98,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: window.location.origin + "/auth/callback",
+          queryParams: {
+            access_type: "offline",
+            prompt: "consent",
+          },
         },
       });
       if (error) throw error;
@@ -99,23 +139,37 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const { data: authData, error } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
+        options: {
+          data: {
+            full_name: data.name,
+          },
+          emailRedirectTo: window.location.origin + "/auth/callback",
+        },
       });
 
       if (error) throw error;
       if (!authData.user) throw new Error("No user returned from signup");
 
-      // Create profile
-      const { error: profileError } = await supabase.from("profiles").insert([
-        {
+      if (authData.session === null) {
+        navigate("/auth/login", {
+          state: {
+            message:
+              "Please check your email to confirm your account before logging in.",
+          },
+        });
+        return;
+      }
+
+      if (authData.session) {
+        setUser({
           id: authData.user.id,
-          full_name: data.name,
+          name: data.name,
           email: data.email,
           role: "user",
-        },
-      ]);
-
-      if (profileError) throw profileError;
-      navigate("/");
+          is_verified: false,
+        });
+        navigate("/");
+      }
     } catch (error) {
       console.error("Registration error:", error);
       throw error;
@@ -127,7 +181,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       setUser(null);
-      navigate("/auth/login", { replace: true });
+      navigate("/auth/login");
     } catch (error) {
       console.error("Logout error:", error);
       throw error;

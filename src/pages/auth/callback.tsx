@@ -1,35 +1,20 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 
 export default function AuthCallback() {
   const navigate = useNavigate();
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const handleAuthCallback = async () => {
+    const handleCallback = async () => {
       try {
-        // Get the URL hash
-        const hash = window.location.hash;
-        if (!hash) throw new Error("No hash found in URL");
-
-        // Parse the access token from the URL
-        const accessToken = new URLSearchParams(hash.substring(1)).get(
-          "access_token",
-        );
-        if (!accessToken) throw new Error("No access token found");
-
-        // Exchange the access token for a session
         const {
           data: { session },
-          error: sessionError,
-        } = await supabase.auth.setSession({
-          access_token: accessToken,
-          refresh_token: null,
-        });
+          error,
+        } = await supabase.auth.getSession();
 
-        if (sessionError) throw sessionError;
-        if (!session?.user) throw new Error("No user in session");
+        if (error) throw error;
+        if (!session?.user) throw new Error("No user found");
 
         // Check if profile exists
         const { data: profile } = await supabase
@@ -40,57 +25,38 @@ export default function AuthCallback() {
 
         if (!profile) {
           // Create profile for new user
-          const { error: profileError } = await supabase
-            .from("profiles")
-            .insert([
-              {
-                id: session.user.id,
-                full_name: session.user.user_metadata.full_name || "",
-                email: session.user.email,
-                avatar_url: session.user.user_metadata.avatar_url,
-                role: "user",
-              },
-            ]);
-
-          if (profileError) {
-            console.error("Error creating profile:", profileError);
-            setError("Failed to create user profile");
-            return;
-          }
+          await supabase.from("profiles").insert([
+            {
+              id: session.user.id,
+              full_name: session.user.user_metadata.full_name || "",
+              email: session.user.email,
+              avatar_url: session.user.user_metadata.avatar_url,
+              role: "user",
+              is_verified: false,
+            },
+          ]);
         }
 
-        // Redirect to home page after successful authentication
+        // Redirect to home page
         navigate("/", { replace: true });
-      } catch (err) {
-        console.error("Error in auth callback:", err);
-        setError("An unexpected error occurred");
-        setTimeout(() => navigate("/login", { replace: true }), 2000);
+      } catch (error) {
+        console.error("Error in auth callback:", error);
+        navigate("/auth/login", { replace: true });
       }
     };
 
-    handleAuthCallback();
+    handleCallback();
   }, [navigate]);
 
   return (
     <div className="min-h-screen flex items-center justify-center">
       <div className="text-center">
-        {error ? (
-          <div className="text-destructive">
-            <h2 className="text-2xl font-semibold mb-2">
-              Authentication Error
-            </h2>
-            <p>{error}</p>
-          </div>
-        ) : (
-          <div className="animate-pulse">
-            <h2 className="text-2xl font-semibold mb-2">
-              Completing sign in...
-            </h2>
-            <p className="text-muted-foreground">
-              Please wait while we redirect you.
-            </p>
-          </div>
-        )}
+        <div className="animate-pulse">
+          <h2 className="text-2xl font-semibold mb-2">Completing sign in...</h2>
+          <p className="text-muted-foreground">
+            Please wait while we redirect you.
+          </p>
+        </div>
       </div>
     </div>
   );

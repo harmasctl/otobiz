@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function LoginPage() {
+  const { state } = useLocation();
   const navigate = useNavigate();
   const { login, loginWithGoogle } = useAuth();
   const [email, setEmail] = useState("");
@@ -25,7 +26,13 @@ export default function LoginPage() {
       // Navigation is handled in AuthProvider
     } catch (err) {
       console.error("Login error:", err);
-      setError("Failed to log in. Please check your credentials.");
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to log in";
+      setError(
+        errorMessage.includes("Invalid login")
+          ? "Invalid email or password"
+          : errorMessage,
+      );
       setLoading(false);
     }
   };
@@ -33,6 +40,11 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <Card className="w-full max-w-md space-y-8 p-8">
+        {state?.message && (
+          <Alert>
+            <AlertDescription>{state.message}</AlertDescription>
+          </Alert>
+        )}
         <div>
           <h2 className="text-center text-3xl font-bold tracking-tight">
             Sign in to your account
@@ -42,7 +54,7 @@ export default function LoginPage() {
             <Button
               variant="link"
               className="font-medium text-primary"
-              onClick={() => navigate("/register")}
+              onClick={() => navigate("/auth/register")}
             >
               create a new account
             </Button>

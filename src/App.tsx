@@ -1,5 +1,6 @@
 import { lazy, Suspense } from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, useRoutes } from "react-router-dom";
+import routes from "tempo-routes";
 import { LoadingPage } from "@/components/ui/loading";
 import { AuthProvider } from "./providers/AuthProvider";
 import BecomeSeller from "./pages/become-seller";
@@ -36,13 +37,14 @@ function App() {
   return (
     <AuthProvider>
       <Suspense fallback={<LoadingPage />}>
+        {import.meta.env.VITE_TEMPO && useRoutes(routes)}
         <Routes>
           {/* Auth Routes */}
-          <Route path="auth">
-            <Route path="login" element={<LoginPage />} />
-            <Route path="register" element={<RegisterPage />} />
-            <Route path="callback" element={<AuthCallback />} />
-          </Route>
+          <Route path="/auth/login" element={<LoginPage />} />
+          <Route path="/auth/register" element={<RegisterPage />} />
+          <Route path="/auth/callback" element={<AuthCallback />} />
+          {/* Direct register route */}
+          <Route path="/register" element={<RegisterPage />} />
 
           {/* Main Layout Routes */}
           <Route element={<AppLayout />}>

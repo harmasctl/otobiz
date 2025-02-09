@@ -223,7 +223,9 @@ const Header = () => {
                 <Button variant="ghost" onClick={() => navigate("/auth/login")}>
                   Log in
                 </Button>
-                <Button onClick={() => navigate("/register")}>Register</Button>
+                <Button onClick={() => navigate("/auth/register")}>
+                  Register
+                </Button>
               </>
             )}
           </div>

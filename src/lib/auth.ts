@@ -1,12 +1,16 @@
 import { createContext, useContext } from "react";
 import { supabase } from "./supabase";
 
+import { Profile } from "@/types/database";
+
 export interface User {
   id: string;
   name: string;
   email: string;
   avatar?: string;
   role: "user" | "dealer" | "admin";
+  is_verified?: boolean;
+  profile?: Profile;
 }
 
 export interface AuthContextType {
